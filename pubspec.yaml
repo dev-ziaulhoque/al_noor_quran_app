@@ -1,0 +1,71 @@
+name: al_noor_app
+description: "A new Flutter project."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.3
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  get: ^4.6.6
+
+  # HTTP
+  dio: ^5.4.0
+
+  # Local Storage
+  get_storage: ^2.1.1
+  shared_preferences: ^2.2.2
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # UI
+  google_fonts: ^6.1.0
+  flutter_svg: ^2.0.9
+  cached_network_image: ^3.3.1
+  shimmer: ^3.0.0
+  lottie: ^3.0.0
+
+  # Sensors (Qibla)
+  flutter_compass: ^0.8.0
+  geolocator: ^11.0.0
+
+  # Prayer Times
+  adhan: ^2.0.0+1
+
+  # Audio (Quran Recitation)
+  just_audio: ^0.9.36
+  audio_session: ^0.1.18
+  audio_service: ^0.18.18
+
+  # Utils
+  intl: ^0.19.0
+  connectivity_plus: ^5.0.2
+  permission_handler: ^11.1.0
+  url_launcher: ^6.2.4
+  share_plus: ^7.2.1
+  flutter_local_notifications: ^17.1.2
+  path_provider: ^2.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  build_runner: ^2.4.7
+  hive_generator: ^2.0.1
+  flutter_lints: ^2.0.3
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+  fonts:
+    - family: Amiri
+      fonts:
+        - asset: assets/fonts/Amiri-Regular.ttf
+        - asset: assets/fonts/Amiri-Bold.ttf
+          weight: 700
