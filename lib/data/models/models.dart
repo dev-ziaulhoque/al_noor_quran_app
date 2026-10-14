@@ -30,6 +30,9 @@ class SurahModel {
       englishName: json['englishName'] ?? '',
     );
   }
+
+  String get englishNameTranslation => meaning;
+  int get numberOfAyahs => totalAyah;
 }
 
 class AyahModel {
@@ -37,7 +40,12 @@ class AyahModel {
   final String arabic;
   final String translation;
   final int surahNumber;
-  final String audio; // New field for ayah audio
+
+  /// Remote URL, or a file path when the recitation is downloaded.
+  final String audio;
+
+  /// Position in the whole Quran (1..6236).
+  final int globalNumber;
 
   AyahModel({
     required this.number,
@@ -45,7 +53,28 @@ class AyahModel {
     required this.translation,
     required this.surahNumber,
     required this.audio,
+    this.globalNumber = 0,
   });
+
+  bool get audioIsLocal => audio.isNotEmpty && !audio.startsWith('http');
+
+  Map<String, dynamic> toJson() => {
+        'number': number,
+        'arabic': arabic,
+        'translation': translation,
+        'surahNumber': surahNumber,
+        'audio': audio,
+        'globalNumber': globalNumber,
+      };
+
+  factory AyahModel.fromJson(Map<String, dynamic> json) => AyahModel(
+        number: json['number'] as int,
+        arabic: json['arabic'] as String,
+        translation: json['translation'] as String? ?? '',
+        surahNumber: json['surahNumber'] as int,
+        audio: json['audio'] as String? ?? '',
+        globalNumber: json['globalNumber'] as int? ?? 0,
+      );
 }
 
 // ... (BookmarkModel and LastReadModel remain the same)

@@ -3,6 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../app/routes/app_routes.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../data/services/storage_service.dart';
+import '../../widgets/app_logo.dart';
+
+/// Same colour and logo size as the native splash (flutter_native_splash in
+/// pubspec.yaml) so the hand-off from the OS splash is invisible.
+const _splashBg = Color(0xFF021B1D);
+const _logoSize = 256.0;
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -11,24 +18,25 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-  late Animation<double> _fadeAnim;
-  late Animation<double> _scaleAnim;
+class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 900))..forward();
+  late final Animation<double> _glow = CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic);
+  late final Animation<double> _footer = CurvedAnimation(parent: _ctrl, curve: const Interval(0.35, 1, curve: Curves.easeOut));
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1200));
-    _fadeAnim = CurvedAnimation(parent: _ctrl, curve: Curves.easeIn);
-    _scaleAnim = Tween<double>(begin: 0.85, end: 1.0).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeOutBack),
-    );
-    _ctrl.forward();
-    Future.delayed(const Duration(seconds: 2, milliseconds: 500), () {
-      Get.offNamed(AppRoutes.home);
+    final onboarded = Get.find<StorageService>().isOnboarded();
+    Future.delayed(const Duration(milliseconds: 1300), () {
+      Get.offNamed(onboarded ? AppRoutes.home : AppRoutes.onboarding);
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    AppLogo.precache(context);
   }
 
   @override
@@ -40,127 +48,52 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF1B6B3A), Color(0xFF0D4223), Color(0xFF2D8B52)],
-            stops: [0.0, 0.58, 1.0],
+      backgroundColor: _splashBg,
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          AnimatedBuilder(
+            animation: _glow,
+            builder: (_, __) => DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  radius: 0.75,
+                  colors: [
+                    AppPalette.gold.withValues(alpha: 0.10 * _glow.value),
+                    _splashBg.withValues(alpha: 0),
+                  ],
+                ),
+              ),
+            ),
           ),
-        ),
-        child: FadeTransition(
-          opacity: _fadeAnim,
-          child: ScaleTransition(
-            scale: _scaleAnim,
-            child: Center(
+          const Center(child: AppLogo.full(size: _logoSize)),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 56,
+            child: FadeTransition(
+              opacity: _footer,
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Decorative rings
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Container(
-                        width: 180,
-                        height: 180,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AppColors.gold.withOpacity(0.15),
-                            width: 1,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        width: 140,
-                        height: 140,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: AppColors.gold.withOpacity(0.1),
-                            width: 1,
-                          ),
-                        ),
-                      ),
-                      // Logo gem
-                      Transform.rotate(
-                        angle: 0.785, // 45 degrees
-                        child: Container(
-                          width: 60,
-                          height: 60,
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [AppColors.goldLight, AppColors.gold],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Center(
-                            child: Transform.rotate(
-                              angle: -0.785,
-                              child: const Text(
-                                '☪',
-                                style: TextStyle(
-                                  fontSize: 26,
-                                  color: Colors.white,
-                                  fontFamily: 'Amiri',
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 28),
-                  // App name Arabic
                   const Text(
-                    'النور',
-                    style: TextStyle(
-                      fontFamily: 'Amiri',
-                      fontSize: 42,
-                      color: Colors.white,
-                      letterSpacing: 4,
-                    ),
+                    'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
+                    textDirection: TextDirection.rtl,
+                    style: TextStyle(fontFamily: 'Amiri', fontSize: 18, color: AppPalette.goldLight),
                   ),
-                  const SizedBox(height: 8),
-                  // Subtitle
-                  const Text(
-                    'القرآن الكريم',
-                    style: TextStyle(
-                      fontFamily: 'Amiri',
-                      fontSize: 20,
-                      color: Color(0xBFFFFFFF),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Divider
-                  Container(
-                    width: 50,
-                    height: 2,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Colors.transparent, AppColors.goldLight, Colors.transparent],
-                      ),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'AL-NOOR',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Color(0x66FFFFFF),
-                      letterSpacing: 6,
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppPalette.goldLight.withValues(alpha: 0.8),
                     ),
                   ),
                 ],
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

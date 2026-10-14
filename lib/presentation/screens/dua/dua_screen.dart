@@ -1,125 +1,141 @@
 // lib/presentation/screens/dua/dua_screen.dart
 import 'package:flutter/material.dart';
-import '../../../core/constants/app_colors.dart';
+import 'package:get/get.dart';
 
-class DuaScreen extends StatelessWidget {
+import '../../../app/controllers/settings_controller.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../data/content/duas.dart';
+import '../../widgets/ayah_share_card.dart';
+import '../../widgets/content_card.dart';
+import '../../widgets/empty_state.dart';
+
+class DuaScreen extends StatefulWidget {
   const DuaScreen({super.key});
 
-  static const List<Map<String, String>> categories = [
-    {'icon': '🌙', 'title': 'Morning Duas', 'count': '12 duas'},
-    {'icon': '☀️', 'title': 'Evening Duas', 'count': '10 duas'},
-    {'icon': '🍽️', 'title': 'Eating & Drinking', 'count': '8 duas'},
-    {'icon': '🚪', 'title': 'Entering Home', 'count': '4 duas'},
-    {'icon': '🕌', 'title': 'After Prayer', 'count': '15 duas'},
-    {'icon': '😴', 'title': 'Before Sleep', 'count': '7 duas'},
-    {'icon': '🌧️', 'title': 'Seeking Forgiveness', 'count': '9 duas'},
-    {'icon': '❤️', 'title': 'For Parents', 'count': '5 duas'},
-  ];
+  @override
+  State<DuaScreen> createState() => _DuaScreenState();
+}
 
-  static const List<Map<String, String>> featured = [
-    {
-      'arabic': 'رَبَّنَا آتِنَا فِي الدُّنْيَا حَسَنَةً وَفِي الآخِرَةِ حَسَنَةً',
-      'translation': 'Our Lord, give us good in this world and good in the Hereafter.',
-      'source': 'Al-Baqarah 2:201',
-    },
-    {
-      'arabic': 'رَبِّ اشْرَحْ لِي صَدْرِي وَيَسِّرْ لِي أَمْرِي',
-      'translation': 'My Lord, expand my breast and ease my task for me.',
-      'source': 'Ta-Ha 20:25-26',
-    },
-  ];
+class _DuaScreenState extends State<DuaScreen> {
+  final _search = TextEditingController();
+  String _category = 'all';
+  String _query = '';
+
+  @override
+  void initState() {
+    super.initState();
+    final arg = Get.arguments;
+    if (arg is Map && arg['category'] is String) _category = arg['category'] as String;
+  }
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  List<Dua> _filtered(bool bangla) {
+    final q = _query.trim().toLowerCase();
+    return Duas.all.where((d) {
+      if (_category != 'all' && d.category != _category) return false;
+      if (q.isEmpty) return true;
+      return d.titleEn.toLowerCase().contains(q) ||
+          d.titleBn.contains(q) ||
+          d.meaningEn.toLowerCase().contains(q) ||
+          d.meaningBn.contains(q) ||
+          d.arabic.contains(q) ||
+          d.source.toLowerCase().contains(q);
+    }).toList();
+  }
+
+  void _share(Dua d, bool bangla) {
+    showAyahShareSheet(
+      context,
+      AyahCardContent.text(
+        arabic: d.arabic,
+        meaning: d.meaning(bangla),
+        heading: '${'Dua'.tr} · ${d.title(bangla)}',
+        reference: d.source,
+        fileId: 'dua_${d.id}',
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final settings = Get.find<SettingsController>();
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Column(children: [
-          Text('Dua Collection', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-          Text('مجموعة الأدعية', style: TextStyle(fontFamily: 'Amiri', fontSize: 12, color: AppColors.textLight)),
-        ]),
-        backgroundColor: Colors.white,
+        title: Column(
+          children: [
+            Text('Dua & Adhkar'.tr, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            Text('الأدعية والأذكار', style: TextStyle(fontFamily: 'Amiri', fontSize: 12, color: AppColors.textLight)),
+          ],
+        ),
+        backgroundColor: AppColors.card,
         elevation: 0,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(12),
-        children: [
-          // Featured duas
-          const Padding(
-            padding: EdgeInsets.only(left: 4, bottom: 8),
-            child: Text('FEATURED DUAS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textLight, letterSpacing: 1)),
-          ),
-          ...featured.map((d) => Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.black.withOpacity(0.06), width: 0.5),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(d['arabic']!, textDirection: TextDirection.rtl, textAlign: TextAlign.right,
-                        style: const TextStyle(fontFamily: 'Amiri', fontSize: 18, color: AppColors.textDark, height: 1.7)),
-                    const SizedBox(height: 8),
-                    const Divider(height: 1, thickness: 0.5),
-                    const SizedBox(height: 8),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(d['translation']!, style: const TextStyle(fontSize: 12, color: AppColors.textMid, height: 1.5)),
-                    ),
-                    const SizedBox(height: 4),
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(color: AppColors.emeraldPale, borderRadius: BorderRadius.circular(20)),
-                        child: Text(d['source']!, style: const TextStyle(fontSize: 10, color: AppColors.emerald, fontWeight: FontWeight.w600)),
-                      ),
-                    ),
-                  ],
-                ),
-              )),
-          const SizedBox(height: 8),
-          const Padding(
-            padding: EdgeInsets.only(left: 4, bottom: 8),
-            child: Text('CATEGORIES', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: AppColors.textLight, letterSpacing: 1)),
-          ),
-          // Category grid
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 1.6,
+      body: Obx(() {
+        settings.appLanguage.value;
+        settings.translationId.value;
+        final bangla = settings.prefersBanglaMeaning;
+        final list = _filtered(bangla);
+        return Column(
+          children: [
+            const SizedBox(height: 12),
+            SearchField(
+              controller: _search,
+              hint: 'Search dua by name, meaning or source…'.tr,
+              onChanged: (v) => setState(() => _query = v),
             ),
-            itemCount: categories.length,
-            itemBuilder: (ctx, i) {
-              final cat = categories[i];
-              return Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.black.withOpacity(0.06), width: 0.5),
-                ),
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(cat['icon']!, style: const TextStyle(fontSize: 24)),
-                    const Spacer(),
-                    Text(cat['title']!, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textDark)),
-                    Text(cat['count']!, style: const TextStyle(fontSize: 11, color: AppColors.textLight)),
-                  ],
-                ),
-              );
-            },
-          ),
-        ],
-      ),
+            const SizedBox(height: 10),
+            CategoryChips(
+              items: [
+                ('all', 'All'.tr),
+                for (final c in Duas.categories) (c.id, '${c.emoji} ${c.name(bangla)}'),
+              ],
+              selected: _category,
+              onSelect: (id) => setState(() => _category = id),
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: list.isEmpty
+                  ? EmptyState(
+                      icon: Icons.volunteer_activism_rounded,
+                      title: 'No dua found'.tr,
+                      message: 'Try another word, or look in a different category.'.tr,
+                      actionLabel: 'Show all duas'.tr,
+                      actionIcon: Icons.refresh_rounded,
+                      onAction: () {
+                        _search.clear();
+                        setState(() {
+                          _query = '';
+                          _category = 'all';
+                        });
+                      },
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                      itemCount: list.length,
+                      itemBuilder: (_, i) {
+                        final d = list[i];
+                        final cat = Duas.categories.firstWhere((c) => c.id == d.category);
+                        return ContentCard(
+                          title: d.title(bangla),
+                          badge: cat.name(bangla),
+                          arabic: d.arabic,
+                          meaning: d.meaning(bangla),
+                          note: d.note(bangla),
+                          source: d.source,
+                          onShare: () => _share(d, bangla),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        );
+      }),
     );
   }
 }

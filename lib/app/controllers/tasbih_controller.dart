@@ -2,6 +2,18 @@
 import 'package:get/get.dart';
 import '../../data/services/storage_service.dart';
 
+class DhikrItem {
+  final String arabic;
+  final String transliteration;
+  final String meaning;
+
+  const DhikrItem({
+    required this.arabic,
+    required this.transliteration,
+    required this.meaning,
+  });
+}
+
 class TasbihController extends GetxController {
   final StorageService _storage = Get.find();
 
@@ -11,11 +23,23 @@ class TasbihController extends GetxController {
   final RxInt targetCount = 33.obs;
   final RxInt selectedPhrase = 0.obs; // 0=SubhanAllah 1=Alhamdulillah 2=AllahuAkbar
 
+  static const List<DhikrItem> dhikrs = [
+    DhikrItem(arabic: 'سُبْحَانَ الله', transliteration: 'SubhanAllah', meaning: 'Glory be to Allah'),
+    DhikrItem(arabic: 'الْحَمْدُ لِلَّه', transliteration: 'Alhamdulillah', meaning: 'Praise be to Allah'),
+    DhikrItem(arabic: 'اللَّهُ أَكْبَر', transliteration: 'Allahu Akbar', meaning: 'Allah is the Greatest'),
+  ];
+
   static const List<Map<String, String>> phrases = [
     {'arabic': 'سُبْحَانَ الله', 'transliteration': 'SubhanAllah', 'meaning': 'Glory be to Allah'},
     {'arabic': 'الْحَمْدُ لِلَّه', 'transliteration': 'Alhamdulillah', 'meaning': 'Praise be to Allah'},
     {'arabic': 'اللَّهُ أَكْبَر', 'transliteration': 'Allahu Akbar', 'meaning': 'Allah is the Greatest'},
   ];
+
+  List<DhikrItem> get dhikrList => dhikrs;
+  RxInt get selectedDhikrIndex => selectedPhrase;
+  DhikrItem get currentDhikr => dhikrs[selectedPhrase.value % dhikrs.length];
+  void selectDhikr(int index) => selectPhrase(index);
+  void increment() => tap();
 
   @override
   void onInit() {
@@ -28,7 +52,6 @@ class TasbihController extends GetxController {
 
   void _checkStreak() {
     final lastDate = _storage.getTasbihLastDate();
-    final today = DateTime.now().toIso8601String().substring(0, 10);
     if (lastDate == null) return;
     final last = DateTime.parse(lastDate);
     final diff = DateTime.now().difference(last).inDays;

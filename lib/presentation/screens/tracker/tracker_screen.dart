@@ -1,6 +1,8 @@
 // lib/presentation/screens/tracker/tracker_screen.dart
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../data/services/storage_service.dart';
 
 class TrackerScreen extends StatefulWidget {
   const TrackerScreen({super.key});
@@ -10,36 +12,122 @@ class TrackerScreen extends StatefulWidget {
 }
 
 class _TrackerScreenState extends State<TrackerScreen> {
+  final StorageService _storage = Get.find<StorageService>();
+
   final Map<String, bool> _tasks = {
     'Fajr Prayer': true,
-    'Read Quran (1 page)': true,
-    'Dhuhr Prayer': false,
-    'Morning Adhkar': false,
-    'Asr Prayer': false,
-    'Evening Adhkar': false,
+    'Dhuhr Prayer': true,
+    'Asr Prayer': true,
+    'Maghrib Prayer': false,
     'Isha Prayer': false,
-    'Tasbih (100x)': false,
+    'Read 1 Page Quran': true,
+    'Morning Adhkar': true,
+    'Evening Adhkar': false,
   };
+
+  final List<String> _customTasks = [];
+  final TextEditingController _customTaskCtrl = TextEditingController();
+
+  Icon _buildIcon(IconData icon, double size, Color color) => Icon(icon, size: size, color: color);
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTasks();
+  }
+
+  void _loadTasks() {
+    final saved = _storage.getTrackerData();
+    if (saved != null) {
+      saved.forEach((key, value) {
+        if (value is bool) {
+          _tasks[key] = value;
+          if (!_isDefaultTask(key) && !_customTasks.contains(key)) {
+            _customTasks.add(key);
+          }
+        }
+      });
+      setState(() {});
+    }
+  }
+
+  bool _isDefaultTask(String key) {
+    return [
+      'Fajr Prayer', 'Dhuhr Prayer', 'Asr Prayer', 'Maghrib Prayer',
+      'Isha Prayer', 'Read 1 Page Quran', 'Morning Adhkar', 'Evening Adhkar'
+    ].contains(key);
+  }
+
+  void _saveTasks() {
+    _storage.saveTrackerData(_tasks);
+  }
+
+  void _toggle(String key) {
+    setState(() {
+      _tasks[key] = !(_tasks[key] ?? false);
+    });
+    _saveTasks();
+  }
+
+  void _addCustomTask() {
+    final name = _customTaskCtrl.text.trim();
+    if (name.isNotEmpty && !_tasks.containsKey(name)) {
+      setState(() {
+        _tasks[name] = false;
+        _customTasks.add(name);
+      });
+      _customTaskCtrl.clear();
+      _saveTasks();
+      Get.back();
+    }
+  }
+
+  void _showAddTaskDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.card,
+        title: Text('Add Custom Habit', style: TextStyle(color: ThemeColors.textDark)),
+        content: TextField(
+          controller: _customTaskCtrl,
+          autofocus: true,
+          style: TextStyle(color: ThemeColors.textDark),
+          decoration: InputDecoration(
+            hintText: 'e.g. Tahajjud, Sadaqah, Read Hadith…',
+            hintStyle: TextStyle(color: ThemeColors.textLight),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: Get.back, child: Text('Cancel', style: TextStyle(color: ThemeColors.textMid))),
+          ElevatedButton(
+            onPressed: _addCustomTask,
+            style: ElevatedButton.styleFrom(backgroundColor: ThemeColors.emerald),
+            child: const Text('Add Task', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final completed = _tasks.values.where((v) => v).length;
-    final total = _tasks.length;
+    final total = _tasks.isNotEmpty ? _tasks.length : 1;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Column(children: [
-          Text('Daily Tracker',
-              style:
-                  TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+        title: Column(children: [
+          Text('Daily Tracker'.tr,
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppColors.textDark)),
           Text('متابعة يومية',
               style: TextStyle(
                   fontFamily: 'Amiri',
                   fontSize: 12,
-                  color: AppColors.textLight)),
+                  color: AppColors.getTextLight())),
         ]),
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.card,
+        foregroundColor: AppColors.textDark,
         elevation: 0,
       ),
       body: ListView(
@@ -47,10 +135,13 @@ class _TrackerScreenState extends State<TrackerScreen> {
         children: [
           // ── Progress card ──
           Container(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF1B6B3A), Color(0xFF0D4223)],
+              gradient: LinearGradient(
+                colors: [
+                  ThemeColors.emerald,
+                  ThemeColors.emerald.withValues(alpha: 0.8)
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -64,41 +155,22 @@ class _TrackerScreenState extends State<TrackerScreen> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text("Today's Progress",
+                        const Text('Today\'s Progress',
                             style: TextStyle(
-                                fontSize: 9,
-                                color: Color(0x80FFFFFF),
-                                letterSpacing: 1.2)),
-                        Text('$completed / $total tasks',
-                            style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w800,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
                                 color: Colors.white)),
-                        const Text('Keep it up! 🌙',
-                            style: TextStyle(
-                                fontSize: 12,
-                                color: Color(0xBFFFFFFF))),
+                        const SizedBox(height: 2),
+                        Text('$completed of ${_tasks.length} completed',
+                            style: const TextStyle(
+                                fontSize: 11, color: Color(0xCCFFFFFF))),
                       ],
                     ),
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppColors.gold.withOpacity(0.2),
-                        border: Border.all(
-                            color: AppColors.goldLight, width: 1.5),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '${((completed / total) * 100).round()}%',
-                          style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white),
-                        ),
-                      ),
-                    ),
+                    Text('${(completed / total * 100).round()}%',
+                        style: const TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                            color: AppPalette.goldLight)),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -106,9 +178,8 @@ class _TrackerScreenState extends State<TrackerScreen> {
                   borderRadius: BorderRadius.circular(6),
                   child: LinearProgressIndicator(
                     value: completed / total,
-                    backgroundColor: Colors.white.withOpacity(0.2),
-                    valueColor:
-                        const AlwaysStoppedAnimation(AppColors.goldLight),
+                    backgroundColor: Colors.white.withValues(alpha: 0.25),
+                    color: AppPalette.goldLight,
                     minHeight: 8,
                   ),
                 ),
@@ -128,43 +199,54 @@ class _TrackerScreenState extends State<TrackerScreen> {
           const SizedBox(height: 16),
 
           // ── Tasks label ──
-          const Padding(
-            padding: EdgeInsets.only(left: 4, bottom: 8),
-            child: Text("TODAY'S TASKS",
-                style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textLight,
-                    letterSpacing: 1)),
+          Padding(
+            padding: const EdgeInsets.only(left: 4, bottom: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text("TODAY'S TASKS",
+                    style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: ThemeColors.textLight,
+                        letterSpacing: 1)),
+                GestureDetector(
+                  onTap: _showAddTaskDialog,
+                  child: Text("+ Add Habit",
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: ThemeColors.emerald)),
+                ),
+              ],
+            ),
           ),
 
           // ── Task list ──
           Container(
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
+              color: AppColors.card,
+              borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                  color: Colors.black.withOpacity(0.06), width: 0.5),
+                  color: ThemeColors.textLight.withValues(alpha: 0.15),
+                  width: 0.5),
             ),
             child: Column(
-              children: _tasks.entries.toList().asMap().entries.map((entry) {
-                final i = entry.key;
-                final task = entry.value;
-                final isLast = i == _tasks.length - 1;
+              children: _tasks.entries.map((task) {
+                final iconColor = ThemeColors.emerald;
+                final textLight = ThemeColors.textLight;
+                final textDark = ThemeColors.textDark;
                 return GestureDetector(
-                  onTap: () =>
-                      setState(() => _tasks[task.key] = !task.value),
+                  onTap: () => _toggle(task.key),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 14),
+                        horizontal: 14, vertical: 12),
                     decoration: BoxDecoration(
-                      border: isLast
-                          ? null
-                          : Border(
-                              bottom: BorderSide(
-                                  color:
-                                      Colors.black.withOpacity(0.04),
-                                  width: 0.5)),
+                      border: Border(
+                          bottom: BorderSide(
+                              color:
+                                  Colors.black.withValues(alpha: 0.04),
+                              width: 0.5)),
                     ),
                     child: Row(children: [
                       AnimatedContainer(
@@ -173,13 +255,13 @@ class _TrackerScreenState extends State<TrackerScreen> {
                         height: 24,
                         decoration: BoxDecoration(
                           color: task.value
-                              ? AppColors.emerald
+                              ? iconColor
                               : Colors.transparent,
                           borderRadius: BorderRadius.circular(7),
                           border: Border.all(
                               color: task.value
-                                  ? AppColors.emerald
-                                  : Colors.black.withOpacity(0.15),
+                                  ? iconColor
+                                  : Colors.black.withValues(alpha: 0.15),
                               width: 1.5),
                         ),
                         child: task.value
@@ -195,8 +277,8 @@ class _TrackerScreenState extends State<TrackerScreen> {
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                             color: task.value
-                                ? AppColors.textLight
-                                : AppColors.textDark,
+                                ? textLight
+                                : textDark,
                             decoration: task.value
                                 ? TextDecoration.lineThrough
                                 : null,
@@ -204,8 +286,8 @@ class _TrackerScreenState extends State<TrackerScreen> {
                         ),
                       ),
                       if (task.value)
-                        const Icon(Icons.check_circle_rounded,
-                            size: 16, color: AppColors.emerald),
+                        Icon(Icons.check_circle_rounded,
+                            size: 16, color: Color.fromARGB(iconColor.alpha, iconColor.red, iconColor.green, iconColor.blue)),
                     ]),
                   ),
                 );
@@ -213,67 +295,6 @@ class _TrackerScreenState extends State<TrackerScreen> {
             ),
           ),
           const SizedBox(height: 16),
-
-          // ── Add custom task ──
-          GestureDetector(
-            onTap: () => _addTask(context),
-            child: Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: AppColors.emeraldPale,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                    color: AppColors.emeraldLight.withOpacity(0.4),
-                    width: 0.8),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.add_rounded,
-                      color: AppColors.emerald, size: 18),
-                  SizedBox(width: 6),
-                  Text('Add Custom Task',
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.emerald)),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _addTask(BuildContext context) {
-    final ctrl = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Add Task'),
-        content: TextField(
-          controller: ctrl,
-          decoration:
-              const InputDecoration(hintText: 'e.g. Read 5 pages'),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () {
-              final txt = ctrl.text.trim();
-              if (txt.isNotEmpty) {
-                setState(() => _tasks[txt] = false);
-              }
-              Navigator.pop(ctx);
-            },
-            style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.emerald),
-            child: const Text('Add',
-                style: TextStyle(color: Colors.white)),
-          ),
         ],
       ),
     );
@@ -283,31 +304,31 @@ class _TrackerScreenState extends State<TrackerScreen> {
 class _StreakCard extends StatelessWidget {
   final String label;
   final String value;
-  const _StreakCard({required this.label, required this.value});
+
+  _StreakCard({super.key, required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
+    final textLight = ThemeColors.textLight;
+    final textDark = ThemeColors.textDark;
+    final emeraldMid = ThemeColors.emeraldMid;
+
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.card,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-              color: Colors.black.withOpacity(0.06), width: 0.5),
+          border: Border.all(color: emeraldMid, width: 0.5),
         ),
         child: Column(
           children: [
             Text(value,
-                style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textDark)),
+                style:
+                    TextStyle(fontSize: 14.0, fontWeight: FontWeight.bold, color: textDark)),
             const SizedBox(height: 2),
             Text(label,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                    fontSize: 9, color: AppColors.textLight)),
+                style: TextStyle(fontSize: 9, color: textLight)),
           ],
         ),
       ),
